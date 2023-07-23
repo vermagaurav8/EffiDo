@@ -21,11 +21,14 @@ MongoConnect();
 const addTodo = async (req, res) => {
     try{
         const { title, description, dueDate, priority, status, tags } = req.body;
-        const newTodo = new Todo(title, description, dueDate, priority, status, tags);
-        console.log(req.body)
-        const todoWithId = { ...newTodo, _id: new ObjectId() };
-        const result = await database.collection(collectionName).insertOne(todoWithId);
-        res.status(201).json(result);
+        if(title) {
+            const newTodo = new Todo(title, description, dueDate, priority, status, tags);
+            const todoWithId = { ...newTodo, _id: new ObjectId() };
+            const result = await database.collection(collectionName).insertOne(todoWithId);
+            res.status(201).json(result);
+        } else {
+            res.status(401).json({ message: "Title is required"});
+        }
     } catch(error) {
         console.error(error);
         res.status(500).json({error: 'Failed to create todo'})
@@ -44,26 +47,26 @@ const getAllTodos = async (req, res) => {
 
 // Getting, updating, deleting todos by Id
 
-const validateTodoId = async (id, res) => {
+const validateTodoId = async (id) => {
     if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid Todo ID' });
+        throw new Error('Invalid Todo id');
     }
   
     const todo = await database.collection(collectionName).findOne({ _id: new ObjectId(id) });
     if (!todo) {
-      return res.status(404).json({ error: 'Todo not found' });
+        throw new Error('Todo not found');
     }
-  
+
     return todo;
 };
 
 const getTodoById = async (req, res) => {
     try{
         const id = req.params.id;
-        const todo = await validateTodoId(id, res);
+        const todo = await validateTodoId(id);
         res.status(201).json(todo);
     } catch(error) {
-        res.status(500).json(error);
+        res.status(500).json({ error: error.message});
     }
     
 }
@@ -71,7 +74,7 @@ const getTodoById = async (req, res) => {
 const updateTodoById = async (req, res) => {
     try{
         const id = req.params.id;
-        await validateTodoId(id, res);
+        await validateTodoId(id);
     
         const update = req.body;
         const updatedTodo = {...update, updatedAt: Date.now()}
@@ -79,43 +82,45 @@ const updateTodoById = async (req, res) => {
         const updatedTodoFromDB = await database.collection(collectionName).findOne({ _id: new ObjectId(id) });
         res.status(200).json(updatedTodoFromDB);
     } catch(error){
-        res.status(500).json(error);
+        res.status(500).json({ error: error.message });
     }
 }
 
 const deleteTodoById = async (req, res) => {
     try{
         const id = req.params.id;
-        await validateTodoId(id, res);
-    
+        await validateTodoId(id);
+     
         const result = await database.collection(collectionName).deleteOne({ _id: new ObjectId(id)});
-        if(result.deletedCount == 1){
-            res.status(200).json({ msg: "Todo Deleted Successfully" });
+        if (result.deletedCount === 1) {
+            res.status(200).json({ msg: 'Todo Deleted Successfully' });
         } else {
-            res.status(404).json({ msg: "Todo Not found" });
+            res.status(404).json({ error: 'Todo not found' });
         }
     } catch (error) {
-        res.status(500).json(error);
+        res.status(500).json({ error: error.message});
     }
 }
 
-// const markTodoCompleted = async (req, res) => {
 
-// }
-
+// Get all completed & pending todos
 const getAllCompletedTodos = async (req, res) => {
-    try{
-
-    } catch(error) {
-        res.status(500).json(error)
+    try {
+        const completedTodos = await database.collection(collectionName).find({ status: { $regex: /^completed$/i }}).toArray();
+        res.status(200).json(completedTodos);
+    } catch (error) {
+        console.error('Error getting all completed Todos:', error);
+        res.status(500).json({ error: 'Failed to get completed Todos' });
     }
 }
 
 const getAllPendingTodos = async (req, res) => {
-    try{
-
-    } catch(error) {
-        res.status(500).json(error);
+    try {
+        const pendingTodos = await database.collection(collectionName).find({ status: { $regex: /^pending$/i }}).toArray();
+        res.status(200).json(pendingTodos);
+    } catch (error) {
+        console.error('Error getting all completed Todos:', error);
+        res.status(500).json({ error: 'Failed to get completed Todos' });
     }
 }
 
