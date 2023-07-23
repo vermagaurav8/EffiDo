@@ -10,8 +10,7 @@ router.get('/api/todos/:id', getTodoById);
 router.put('/api/todos/:id', updateTodoById);
 router.delete('/api/todos/:id', deleteTodoById);
 
-
-router.get('/api/todos/completed', getAllCompletedTodos);
-router.get('/api/todos/pending', getAllPendingTodos);
+router.get('/api/todos/all/completed', getAllCompletedTodos);
+router.get('/api/todos/all/pending', getAllPendingTodos);
 
 export default router;
